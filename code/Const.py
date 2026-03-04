@@ -1,5 +1,6 @@
 #C
 C_WHITE = (255, 255, 255)
+C_GREEN = (189, 239, 101)
 
 #M
 MENU_OPTIONS = (
