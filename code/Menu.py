@@ -18,14 +18,23 @@ class Menu():
         menu_option = 0
         while True:
             self.window.blit(source=self.surf, dest=self.rect)
+            # fundo semi-transparente para o menu
+            menu_bg = pygame.Surface((320, 140))
+            menu_bg.set_alpha(130)  # transparência
+            menu_bg.fill((0, 0, 0))
+
+            bg_rect = menu_bg.get_rect(center=(560, 225))
+            self.window.blit(menu_bg, bg_rect)
+
+
             for i in range(len(MENU_OPTIONS)):
                 if i == menu_option:
-                    self.menu_text(text_size=40, text=MENU_OPTIONS[i], text_color=C_GREEN,text_center_pos=(580, 200 + 50 * i))
+                    self.menu_text(text_size=40, text=MENU_OPTIONS[i], text_color=C_GREEN,text_center_pos=(560, 200 + 50 * i))
                 else:
-                    self.menu_text(text_size=40,  text=MENU_OPTIONS[i],  text_color=C_WHITE, text_center_pos=(580, 200 + 50*i))
+                    self.menu_text(text_size=40,  text=MENU_OPTIONS[i],  text_color=C_WHITE, text_center_pos=(560, 200 + 50*i))
 
             for i in range(len(MENU_INFO)):
-                self.menu_text(text_size=20, text=MENU_INFO[i], text_color=C_WHITE, text_center_pos=(580, 310 + 28 * i))
+                self.menu_text(text_size=20, text=MENU_INFO[i], text_color=C_WHITE, text_center_pos=(560, 350 + 28 * i))
 
             for i in range(len(MENU_GOALS)):
                 self.menu_text(text_size=20, text=MENU_GOALS[i], text_color=C_WHITE, text_center_pos=(450, 530 + 25 * i))

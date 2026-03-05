@@ -5,7 +5,7 @@ from code.Player import Player
 from code.Dumpster import Dumpster
 from code.Spike import Spike
 from code.Radioactive import Radioactive
-from code.Const import WIN_HEIGHT, WIN_WIDTH
+from code.Const import WIN_HEIGHT, WIN_WIDTH, MENU_OPTIONS, C_GREEN, C_WHITE, NUM_DUMPSTER
 
 
 class Level:
@@ -18,6 +18,12 @@ class Level:
         self.game_over = False
         self.slowdown = False
         self.gameover_alpha = 0
+
+        self.win = False
+        self.win_alpha = 0
+
+        self.dumpsters_collected = 0
+        self.dumpsters_target = NUM_DUMPSTER
 
         self.spikes = []
         self.barrels = []
@@ -42,8 +48,24 @@ class Level:
         self.blowout_sound = pygame.mixer.Sound('./asset/blowout.wav')
         self.explosion_sound = pygame.mixer.Sound('./asset/explosion.wav')
         self.gameover_sound = pygame.mixer.Sound('./asset/game_over.wav')
+        self.win_sound = pygame.mixer.Sound('./asset/winning.wav')
+
+        # som do contador
+        self.counter_sound = pygame.mixer.Sound('./asset/bip_counter.wav')
 
         self.gameover_img = pygame.image.load('./asset/Game_over.png').convert_alpha()
+        self.win_img = pygame.image.load('./asset/You_Win.png').convert_alpha()
+
+        # controle do menu final
+        self.end_menu_timer = None
+        self.show_end_menu = False
+        self.menu_option = 0
+
+        # countdown inicial
+        self.countdown_value = 3
+        self.last_count_update = pygame.time.get_ticks()
+        self.game_started = False
+
 
     def spawn_obstacle(self):
 
@@ -51,68 +73,17 @@ class Level:
             return
 
         lanes = [140, 240, 340, 440]
-
         spawn_x = WIN_WIDTH + 120
 
-        # evitar spawn perto de dumpsters que estão entrando na tela
-        for dumpster in self.dumpsters:
-            if WIN_WIDTH - 150 < dumpster.rect.x < WIN_WIDTH + 150:
-                return
-
-        occupied_lanes = []
-
-        for spike in self.spikes:
-            occupied_lanes.append(spike.rect.y)
-
-        for barrel in self.barrels:
-            occupied_lanes.append(barrel.rect.y)
-
-        free_lanes = [lane for lane in lanes if lane not in occupied_lanes]
-
-        if not free_lanes:
-            return
-
-        y = random.choice(free_lanes)
+        y = random.choice(lanes)
 
         if self.last_obstacle == "spike":
-
             self.barrels.append(Radioactive((spawn_x, y)))
             self.last_obstacle = "barrel"
-
         else:
-
             self.spikes.append(Spike((spawn_x, y)))
             self.last_obstacle = "spike"
 
-        # evitar obstáculo perto de caçamba
-        for dumpster in self.dumpsters:
-            if abs(dumpster.rect.x - spawn_x) < 250:
-                return
-
-        occupied_lanes = []
-
-        for spike in self.spikes:
-            occupied_lanes.append(spike.rect.y)
-
-        for barrel in self.barrels:
-            occupied_lanes.append(barrel.rect.y)
-
-        free_lanes = [lane for lane in lanes if lane not in occupied_lanes]
-
-        if not free_lanes:
-            return
-
-        y = random.choice(free_lanes)
-
-        if self.last_obstacle == "spike":
-
-            self.barrels.append(Radioactive((spawn_x, y)))
-            self.last_obstacle = "barrel"
-
-        else:
-
-            self.spikes.append(Spike((spawn_x, y)))
-            self.last_obstacle = "spike"
 
     def spawn_dumpster(self):
 
@@ -126,7 +97,6 @@ class Level:
         name = random.choice(dumpster_types)
 
         lanes = [140, 240, 340, 440]
-
         y_position = random.choice(lanes)
 
         distance = random.randint(320, 480)
@@ -137,6 +107,7 @@ class Level:
 
         self.dumpsters.append(dumpster)
 
+
     def run(self):
 
         clock = pygame.time.Clock()
@@ -146,13 +117,33 @@ class Level:
         pygame.mixer.music.play(-1)
 
         self.engine_sound.set_volume(0.6)
-        self.engine_sound.play(-1)
+
+
+        font = pygame.font.SysFont("Arial", 28)
 
         while True:
 
             clock.tick(60)
 
-            if not self.game_over:
+            # CONTADOR INICIAL
+            if not self.game_started:
+
+                now = pygame.time.get_ticks()
+
+                if now - self.last_count_update >= 1000:
+
+                    if self.countdown_value > 0:
+                        self.counter_sound.play()
+
+                    self.countdown_value -= 1
+                    self.last_count_update = now
+
+                    if self.countdown_value < 0:
+                        self.game_started = True
+                        self.engine_sound.play(-1)
+
+
+            if not self.game_over and not self.win and self.game_started:
 
                 last_dumpster = self.dumpsters[-1]
 
@@ -172,11 +163,24 @@ class Level:
                     else:
                         self.game_over = True
 
-                for dumpster in self.dumpsters[:]:
+                for dumpster in self.dumpsters:
                     dumpster.move()
+
+                for dumpster in self.dumpsters[:]:
 
                     if dumpster.rect.right < 0:
                         self.dumpsters.remove(dumpster)
+                        continue
+
+                    if self.player.rect.colliderect(dumpster.rect):
+
+                        self.collect_sound.play()
+                        self.dumpsters.remove(dumpster)
+
+                        self.dumpsters_collected += 1
+
+                        if self.dumpsters_collected >= self.dumpsters_target:
+                            self.win = True
 
                 for spike in self.spikes[:]:
                     spike.move()
@@ -184,24 +188,17 @@ class Level:
                     if spike.rect.right < 0:
                         self.spikes.remove(spike)
 
+                    if self.player.rect.colliderect(spike.rect):
+                        if not self.slowdown:
+                            self.blowout_sound.play()
+                            self.slowdown = True
+
                 for barrel in self.barrels[:]:
                     barrel.move()
 
                     if barrel.rect.right < 0:
                         self.barrels.remove(barrel)
 
-                for dumpster in self.dumpsters[:]:
-                    if self.player.rect.colliderect(dumpster.rect):
-                        self.collect_sound.play()
-                        self.dumpsters.remove(dumpster)
-
-                for spike in self.spikes:
-                    if self.player.rect.colliderect(spike.rect):
-                        if not self.slowdown:
-                            self.blowout_sound.play()
-                            self.slowdown = True
-
-                for barrel in self.barrels:
                     if self.player.rect.colliderect(barrel.rect):
                         if not self.game_over:
                             self.explosion_sound.play()
@@ -214,6 +211,15 @@ class Level:
 
                 if self.bg2.rect.right <= 0:
                     self.bg2.rect.left = self.bg1.rect.right
+
+
+            if (self.game_over or self.win) and self.end_menu_timer is None:
+                self.end_menu_timer = pygame.time.get_ticks()
+
+            if self.end_menu_timer:
+                if pygame.time.get_ticks() - self.end_menu_timer > 1000:
+                    self.show_end_menu = True
+
 
             self.window.blit(self.bg1.surf, self.bg1.rect)
             self.window.blit(self.bg2.surf, self.bg2.rect)
@@ -228,6 +234,42 @@ class Level:
                 self.window.blit(barrel.surf, barrel.rect)
 
             self.window.blit(self.player.surf, self.player.rect)
+
+            counter_text = f"{self.dumpsters_collected} / {self.dumpsters_target}"
+            text_surface = font.render(counter_text, True, (255, 255, 255))
+            text_rect = text_surface.get_rect(topright=(WIN_WIDTH - 20, 20))
+
+            # fundo semi-transparente
+            padding_x = 12
+            padding_y = 8
+
+            bg_rect = pygame.Rect(
+                text_rect.left - padding_x,
+                text_rect.top - padding_y,
+                text_rect.width + padding_x * 2,
+                text_rect.height + padding_y * 2
+            )
+
+            counter_bg = pygame.Surface((bg_rect.width, bg_rect.height), pygame.SRCALPHA)
+            counter_bg.fill((0, 0, 0, 130))  # preto com transparência
+
+            self.window.blit(counter_bg, (bg_rect.x, bg_rect.y))
+
+            # texto do contador
+            self.window.blit(text_surface, text_rect)
+
+
+            if not self.game_started:
+
+                font_count = pygame.font.SysFont("Lucida Sans Typewriter", 150)
+
+                text = str(self.countdown_value if self.countdown_value > 0 else "")
+
+                text_surface = font_count.render(text, True, (255,255,255))
+                rect = text_surface.get_rect(center=(WIN_WIDTH//2, WIN_HEIGHT//2))
+
+                self.window.blit(text_surface, rect)
+
 
             if self.game_over:
 
@@ -245,9 +287,69 @@ class Level:
 
                 self.window.blit(self.gameover_img, rect)
 
+
+            if self.win:
+
+                self.engine_sound.stop()
+
+                if self.win_alpha == 0:
+                    self.win_sound.play()
+
+                if self.win_alpha < 255:
+                    self.win_alpha += 3
+
+                self.win_img.set_alpha(self.win_alpha)
+
+                rect = self.win_img.get_rect(center=(WIN_WIDTH//2, WIN_HEIGHT//2))
+
+                self.window.blit(self.win_img, rect)
+
+            if self.show_end_menu:
+
+                font_menu = pygame.font.SysFont("Lucida Sans Typewriter", 40)
+
+                # cria retângulo com transparência
+                menu_bg = pygame.Surface((420, 140))
+                menu_bg.set_alpha(130)  # transparência (0-255)
+                menu_bg.fill((0, 0, 0))
+
+                bg_rect = menu_bg.get_rect(center=(WIN_WIDTH // 2, 380))
+                self.window.blit(menu_bg, bg_rect)
+
+                for i in range(len(MENU_OPTIONS)):
+                    color = C_GREEN if i == self.menu_option else C_WHITE
+
+                    text = font_menu.render(MENU_OPTIONS[i], True, color)
+
+                    rect = text.get_rect(center=(WIN_WIDTH // 2, 350 + i * 60))
+
+                    self.window.blit(text, rect)
+
+
             pygame.display.flip()
 
+
             for event in pygame.event.get():
+
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     quit()
+
+                if self.show_end_menu:
+
+                    if event.type == pygame.KEYDOWN:
+
+                        if event.key == pygame.K_UP:
+                            self.menu_option = (self.menu_option - 1) % len(MENU_OPTIONS)
+
+                        if event.key == pygame.K_DOWN:
+                            self.menu_option = (self.menu_option + 1) % len(MENU_OPTIONS)
+
+                        if event.key == pygame.K_RETURN:
+
+                            if MENU_OPTIONS[self.menu_option] == "INICIAR JOGO":
+                                self.__init__(self.window, self.name)
+
+                            if MENU_OPTIONS[self.menu_option] == "SAIR":
+                                pygame.quit()
+                                quit()

@@ -14,6 +14,9 @@ MENU_INFO = (
     "Seta p/Baixo - Mover caminhão para baixo",
 )
 
+#N
+NUM_DUMPSTER = 20
+
 MENU_GOALS =(
     "OBJETIVO",
     "Colete as caçambas de lixo. Evite espinhos e barris radioativos"
