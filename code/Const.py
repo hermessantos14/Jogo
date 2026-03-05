@@ -19,6 +19,10 @@ MENU_GOALS =(
     "Colete as caçambas de lixo. Evite espinhos e barris radioativos"
 )
 
+#R
+ROAD_TOP = 30
+ROAD_BOTTOM = 570
+
 #W
 WIN_WIDTH = 900
 WIN_HEIGHT = 600
