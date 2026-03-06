@@ -1,5 +1,6 @@
 import pygame
 import random
+import sys
 from code.Background import Background
 from code.Player import Player
 from code.Dumpster import Dumpster
@@ -333,7 +334,7 @@ class Level:
 
                 if event.type == pygame.QUIT:
                     pygame.quit()
-                    quit()
+                    sys.exit()
 
                 if self.show_end_menu:
 
@@ -352,4 +353,4 @@ class Level:
 
                             if MENU_OPTIONS[self.menu_option] == "SAIR":
                                 pygame.quit()
-                                quit()
+                                sys.exit()

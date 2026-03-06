@@ -4,7 +4,7 @@ from code.Const import WIN_WIDTH, MENU_OPTIONS
 from code.Const import WIN_HEIGHT
 from code.Level import Level
 from code.Menu import Menu
-
+import sys
 class Game:
     def __init__(self):
         pygame.init()
@@ -22,7 +22,7 @@ class Game:
 
 
             elif menu_return == MENU_OPTIONS[1]:
-                pygame.quit()  # quit game
-                quit()
+                pygame.quit()
+                sys.exit()
             else:
                 pass
